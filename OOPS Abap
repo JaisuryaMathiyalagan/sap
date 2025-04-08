@@ -1,0 +1,400 @@
+REPORT zconcept_oops.
+
+"#Inheritance
+"#Creating sub class from Main Class.
+"#Instance method - Create Object
+"#Static method - No Need to Create Object
+
+
+DATA:lv_erdat  TYPE erdat,
+     lv_erzet  TYPE erzet,
+     lv_ernam  TYPE ernam,
+     lv_vbtypl TYPE vbtypl.
+
+
+
+PARAMETERS:p_vbeln TYPE vbeln_va.
+PARAMETERS:r1 TYPE c RADIOBUTTON GROUP rad,
+           r2 TYPE c RADIOBUTTON GROUP rad.
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+    METHODS display IMPORTING pvbeln TYPE vbeln_va
+                    EXPORTING perdat TYPE erdat
+                              perzet TYPE erzet
+                              pernam TYPE ernam
+                              pvbtyp TYPE vbtypl.
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD display.
+    SELECT SINGLE erdat erzet ernam vbtyp
+      FROM vbak
+      INTO ( perdat,perzet,pernam,pvbtyp )
+      WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS class2 DEFINITION INHERITING FROM class1.
+
+ENDCLASS.
+
+
+START-OF-SELECTION.
+  DATA:obj1 TYPE REF TO class2.
+  CREATE OBJECT obj1.
+
+  CALL METHOD obj1->display
+    EXPORTING
+      pvbeln = p_vbeln
+    IMPORTING
+      perdat = lv_erdat
+      perzet = lv_erzet
+      pernam = lv_ernam
+      pvbtyp = lv_vbtypl.
+  WRITE: / lv_erdat,
+           lv_erzet,
+           lv_ernam,
+           lv_vbtypl.
+
+
+
+  "#Abstract Class
+  "#Abstract Class should have atleast One abstract Method
+  "#Abstract method have only definition No Implementation
+  "#you can implement abstract method by creating subclass
+  "#In subclass you have to Inherite and Redefine that method to implement
+
+CLASS zabstract DEFINITION ABSTRACT.
+  PUBLIC SECTION.
+    METHODS display ABSTRACT IMPORTING pvbeln TYPE vbeln_va
+                             EXPORTING perdat TYPE erdat
+                                       perzet TYPE erzet
+                                       pernam TYPE ernam
+                                       pvbtyp TYPE vbtypl.
+ENDCLASS.
+
+
+CLASS zsales DEFINITION INHERITING FROM zabstract.
+  PUBLIC SECTION.
+    METHODS display REDEFINITION.
+ENDCLASS.
+
+
+CLASS zsales IMPLEMENTATION.
+  METHOD display.
+    SELECT SINGLE erdat erzet ernam vbtyp
+      FROM vbak
+      INTO ( perdat,perzet,pernam,pvbtyp )
+      WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+ENDCLASS.
+
+
+CLASS zbilling DEFINITION INHERITING FROM zabstract.
+  PUBLIC SECTION.
+    METHODS display REDEFINITION.
+ENDCLASS.
+
+
+CLASS zbilling IMPLEMENTATION.
+  METHOD display.
+    SELECT SINGLE vbtyp ernam erzet erdat
+      FROM vbrk
+      INTO ( pvbtyp,pernam,perzet,perdat )
+      WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+ENDCLASS.
+
+START-OF-SELECTION.
+  DATA:obj01 TYPE REF TO zsales.
+  DATA:obj02 TYPE REF TO zbilling.
+  CREATE OBJECT obj01.
+  CREATE OBJECT obj02.
+  IF r1 = 'X'.
+    CALL METHOD obj01->display
+      EXPORTING
+        pvbeln = p_vbeln
+      IMPORTING
+        perdat = lv_erdat
+        perzet = lv_erzet
+        pernam = lv_ernam
+        pvbtyp = lv_vbtypl.
+    WRITE: / lv_erdat,
+             lv_erzet,
+             lv_ernam,
+             lv_vbtypl.
+
+
+
+  ELSEIF r2 = 'X'.
+    CALL METHOD obj02->display
+      EXPORTING
+        pvbeln = p_vbeln
+      IMPORTING
+        pvbtyp = lv_vbtypl
+        pernam = lv_ernam
+        perzet = lv_erzet
+        perdat = lv_erdat.
+
+
+    WRITE: / lv_vbtypl,
+             lv_ernam,
+             lv_erzet,
+             lv_erdat.
+  ENDIF.
+
+
+
+  "#Interface
+  "#In Interface All method are Public By default
+  "#In Interface All method are Abstract ( There is only Definition , no implementation ).
+  "#Polymorphism Archive Via Interface
+  "#Multiple Inheritance is Possible
+
+  "#Polymorphism
+INTERFACE interface_name.
+  METHODS display IMPORTING pvbeln TYPE vbeln_va
+                  EXPORTING perdat TYPE erdat
+                            perzet TYPE erzet
+                            pernam TYPE ernam
+                            pvbtyp TYPE vbtypl.
+ENDINTERFACE.
+
+
+CLASS int_class1 DEFINITION.
+  PUBLIC SECTION.
+    INTERFACES interface_name.
+ENDCLASS.
+
+CLASS int_class1 IMPLEMENTATION.
+  METHOD interface_name~display.
+    SELECT SINGLE erdat erzet ernam vbtyp
+    FROM vbak
+    INTO ( perdat,perzet,pernam,pvbtyp )
+    WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+ENDCLASS.
+
+
+
+
+CLASS int_class2 DEFINITION.
+  PUBLIC SECTION.
+    INTERFACES interface_name.
+ENDCLASS.
+
+
+CLASS int_class2 IMPLEMENTATION.
+  METHOD interface_name~display.
+    SELECT SINGLE vbtyp ernam erzet erdat
+      FROM vbrk
+      INTO ( pvbtyp,pernam,perzet,perdat )
+      WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+ENDCLASS.
+
+
+START-OF-SELECTION.
+  DATA:obji1 TYPE REF TO int_class1.
+  DATA:obji2 TYPE REF TO int_class2.
+  CREATE OBJECT obji1.
+  CREATE OBJECT obji2.
+
+  IF r1 = 'X'.
+
+    CALL METHOD obji1->interface_name~display
+      EXPORTING
+        pvbeln = p_vbeln
+      IMPORTING
+        perdat = lv_erdat
+        perzet = lv_erzet
+        pernam = lv_ernam
+        pvbtyp = lv_vbtypl.
+
+
+    WRITE:'The Sales Order Details are follows',
+            lv_erdat,
+            lv_erzet,
+            lv_ernam,
+            lv_vbtypl.
+
+  ELSEIF r2 = 'X'.
+
+    CALL METHOD obji2->interface_name~display
+      EXPORTING
+        pvbeln = p_vbeln
+      IMPORTING
+        pvbtyp = lv_vbtypl
+        pernam = lv_ernam
+        perzet = lv_erzet
+        perdat = lv_erdat.
+
+
+    WRITE:'The Billing Order Details are follows',
+            lv_vbtypl,
+            lv_ernam,
+            lv_erzet,
+            lv_erdat.
+
+  ENDIF.
+  "#Multiple Inheritance is Possible in Interface
+INTERFACE interface_name1.
+  METHODS sales IMPORTING pvbeln TYPE vbeln_va
+                EXPORTING perdat TYPE erdat
+                          perzet TYPE erzet
+                          pernam TYPE ernam
+                          pvbtyp TYPE vbtypl.
+ENDINTERFACE.
+
+INTERFACE interface_name2.
+  METHODS billing IMPORTING pvbeln TYPE vbeln_va
+                  EXPORTING pvbtyp TYPE vbtypl
+                            pernam TYPE ernam
+                            perzet TYPE erzet
+                            perdat TYPE erdat.
+ENDINTERFACE.
+
+CLASS multi DEFINITION.
+  PUBLIC SECTION.
+    INTERFACES interface_name1.
+    INTERFACES interface_name2.
+ENDCLASS.
+
+CLASS multi IMPLEMENTATION.
+  METHOD interface_name1~sales.
+    SELECT SINGLE erdat erzet ernam vbtyp
+    FROM vbak
+    INTO ( perdat,perzet,pernam,pvbtyp )
+    WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+
+  METHOD interface_name2~billing.
+    SELECT SINGLE vbtyp ernam erzet erdat
+      FROM vbrk
+      INTO ( pvbtyp,pernam,perzet,perdat )
+      WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+START-OF-SELECTION.
+  DATA:object1 TYPE REF TO multi.
+  CREATE OBJECT object1.
+
+  IF r1 = 'X'.
+
+    CALL METHOD object1->interface_name1~sales
+      EXPORTING
+        pvbeln = p_vbeln
+      IMPORTING
+        perdat = lv_erdat
+        perzet = lv_erzet
+        pernam = lv_ernam
+        pvbtyp = lv_vbtypl.
+
+
+    WRITE:'The Sales Order Details are follows',
+            lv_erdat,
+            lv_erzet,
+            lv_ernam,
+            lv_vbtypl.
+
+  ELSEIF r2 = 'X'.
+
+    CALL METHOD object1->interface_name2~billing
+      EXPORTING
+        pvbeln = p_vbeln
+      IMPORTING
+        pvbtyp = lv_vbtypl
+        pernam = lv_ernam
+        perzet = lv_erzet
+        perdat = lv_erdat.
+
+
+    WRITE:'The Billing Order Details are follows',
+            lv_vbtypl,
+            lv_ernam,
+            lv_erzet,
+            lv_erdat.
+
+  ENDIF.
+
+
+  "#OOPSEVENTS
+
+CLASS cl_event DEFINITION.
+  PUBLIC SECTION.
+    METHODS display IMPORTING pvbeln TYPE vbeln_va
+                    EXPORTING perdat TYPE erdat
+                              perzet TYPE erzet
+                              pernam TYPE ernam
+                              pvbtyp TYPE vbtypl.
+    EVENTS:no_inputs,wrong_inputs.
+ENDCLASS.
+
+CLASS cl_event IMPLEMENTATION.
+  METHOD display.                    "Triggering Event
+    IF pvbeln IS INITIAL.
+      RAISE EVENT no_inputs.
+    ELSE.
+      SELECT SINGLE erdat erzet ernam vbtyp
+      FROM vbak
+      INTO ( perdat,perzet,pernam,pvbtyp )
+      WHERE vbeln = p_vbeln.
+      IF sy-subrc = 0.
+        RAISE EVENT wrong_inputs.
+      ENDIF.
+    ENDIF.
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS event_1 DEFINITION.
+  PUBLIC SECTION.                     "Event Handler
+    METHODS message FOR EVENT no_inputs OF cl_event.
+    METHODS msg FOR EVENT wrong_inputs OF cl_event.
+
+ENDCLASS.
+
+CLASS event_1 IMPLEMENTATION.
+  METHOD message.
+    WRITE:'Please Enter Inputs'.
+  ENDMETHOD.
+
+  METHOD msg.
+    WRITE:'Enter Correct Inputs'.
+  ENDMETHOD.
+
+ENDCLASS.
+
+START-OF-SELECTION.
+
+  DATA:eve_obj1 TYPE REF TO cl_event.
+  DATA:eve_obj2 TYPE REF TO event_1.
+  CREATE OBJECT eve_obj1.
+  CREATE OBJECT eve_obj2.
+
+  "registering Event Handler.
+  IF p_vbeln IS INITIAL.
+    SET HANDLER eve_obj2->message FOR eve_obj1.
+  ELSE.
+    SET HANDLER eve_obj2->msg FOR eve_obj1.
+  ENDIF.
+
+  CALL METHOD eve_obj1->display
+    EXPORTING
+      pvbeln = p_vbeln
+    IMPORTING
+      perdat = lv_erdat
+      perzet = lv_erzet
+      pernam = lv_ernam
+      pvbtyp = lv_vbtypl.
+
+  IF lv_erdat IS NOT INITIAL AND lv_erzet IS NOT INITIAL AND lv_ernam IS NOT INITIAL AND lv_erdat IS NOT INITIAL AND lv_vbtypl IS NOT INITIAL.
+    WRITE:/ lv_erdat,
+          lv_erzet,
+          lv_ernam,
+          lv_vbtypl.
+  ENDIF.
