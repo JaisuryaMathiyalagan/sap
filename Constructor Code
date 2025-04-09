@@ -1,0 +1,55 @@
+&---------------------------------------------------------------------
+*& Report ZCONSTRUCTOR
+&---------------------------------------------------------------------
+*&
+&---------------------------------------------------------------------
+REPORT zconstructor.
+
+PARAMETERS:p_vbeln TYPE vbeln_va.
+DATA:lv_vbeln  TYPE vbeln_va,
+     lv_erdat  TYPE erdat,
+     lv_erzet  TYPE erzet,
+     lv_ernam  TYPE ernam,
+     lv_vbtypl TYPE vbtypl.
+
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+    METHODS display IMPORTING pvbeln TYPE vbeln_va
+                    EXPORTING perdat TYPE erdat
+                              perzet TYPE erzet
+                              pernam TYPE ernam
+                              pvbtyp TYPE vbtypl.
+    METHODS constructor.
+    CLASS-METHODS class_constructor.
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD display.
+    SELECT SINGLE erdat erzet ernam vbtyp
+      FROM vbak
+      INTO (perdat,perzet,pernam,pvbtyp)
+      WHERE vbeln = p_vbeln.
+  ENDMETHOD.
+  METHOD constructor.
+    WRITE:'Instance Method'.
+  ENDMETHOD.
+  METHOD class_constructor.
+    WRITE:'Static Method'.
+  ENDMETHOD.
+ENDCLASS.
+
+START-OF-SELECTION.
+  DATA:obj TYPE REF TO class1.
+  CREATE OBJECT obj.
+*  CREATE OBJECT obj.
+*
+*  CALL METHOD obj->display
+*    EXPORTING
+*      pvbeln = lv_vbeln
+*    IMPORTING
+*      perdat = lv_erdat
+*      perzet = lv_erzet
+*      pernam = lv_ernam
+*      pvbtyp = lv_vbtypl.
+**call METHOD obj->constructor.
+**call METHOD class_constructor.
