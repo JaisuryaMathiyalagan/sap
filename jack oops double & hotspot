@@ -1,0 +1,198 @@
+&---------------------------------------------------------------------
+*& Report ZROLLS
+&---------------------------------------------------------------------
+*&
+&---------------------------------------------------------------------
+report ZROLLS.
+tables:VBAK,VBAP.
+types:begin of LTY_VBAK,
+        VBELN type VBELN_VA,
+        ERDAT type ERDAT,
+        ERZET type ERZET,
+        ERNAM type ERNAM,
+        VBTYP type VBTYPL,
+      end of LTY_VBAK.
+
+types: begin of LTY_VBAP,
+         VBELN type VBELN_VA,
+         POSNR type POSNR_VA,
+         MATNR type MATNR,
+       end of LTY_VBAP.
+
+data:LT_VBAK type table of LTY_VBAK,
+     LS_VBAK type LTY_VBAK,
+     LT_VBAP type table of LTY_VBAP,
+     LS_VBAP type LTY_VBAP.
+
+data:LT_FIELDCAT1 type LVC_T_FCAT.
+data:LT_FIELDCAT2 type LVC_T_FCAT.
+data:LS_FIELDCAT1 type LVC_S_FCAT.
+data:LS_FIELDCAT2 type LVC_S_FCAT.
+
+data:OBJ_CONTAINER1 type ref to CL_GUI_CUSTOM_CONTAINER.
+data:OBJ_CONTAINER2 type ref to CL_GUI_CUSTOM_CONTAINER.
+
+data:OBJ_GRID1 type ref to CL_GUI_ALV_GRID.
+data:OBJ_GRID2 type ref to CL_GUI_ALV_GRID.
+
+data:LT_ROWS type LVC_T_ROW.
+data:LS_ROWS type LVC_S_ROW.
+
+
+
+select-options:S_VBELN for VBAK-VBELN.
+
+class EVENT definition.
+  public section.
+*    methods HANDEL for event DOUBLE_CLICK of CL_GUI_ALV_GRID.
+    methods HOT for event HOTSPOT_CLICK of CL_GUI_ALV_GRID.
+endclass.
+
+class EVENT implementation.
+  method HOT.
+    call method OBJ_GRID1->GET_SELECTED_ROWS
+      importing
+        ET_INDEX_ROWS = LT_ROWS.                " Indexes of Selected Rows
+*        ET_ROW_NO     =                  " Numeric IDs of Selected Rows.
+
+    read table LT_ROWS into LS_ROWS index 1.
+    if SY-SUBRC = 0.
+      read table LT_VBAK into LS_VBAK index LS_ROWS-INDEX.
+      if SY-SUBRC = 0.
+        select VBELN POSNR MATNR
+          from VBAP
+          into table LT_VBAP
+          where VBELN = LS_VBAK-VBELN.
+
+        LT_FIELDCAT2 = value #( ( COL_POS = 1 FIELDNAME = 'VBELN' SELTEXT = 'Sales Document'  )
+                                ( COL_POS = 2 FIELDNAME = 'POSNR' SELTEXT = 'Item' )
+                                ( COL_POS = 3 FIELDNAME = 'MATNR' SELTEXT = 'Matrial Number' ) ).
+
+
+        create object OBJ_CONTAINER2
+          exporting
+            CONTAINER_NAME = 'CON_NAM2'.
+        create object OBJ_GRID2
+          exporting
+            I_PARENT = OBJ_CONTAINER2.
+
+        call method OBJ_GRID2->SET_TABLE_FOR_FIRST_DISPLAY
+          changing
+            IT_OUTTAB                     = LT_VBAP                " Output Table
+            IT_FIELDCATALOG               = LT_FIELDCAT2                 " Field Catalog
+*           IT_SORT                       =                  " Sort Criteria
+*           IT_FILTER                     =                  " Filter Criteria
+          exceptions
+            INVALID_PARAMETER_COMBINATION = 1                " Wrong Parameter
+            PROGRAM_ERROR                 = 2                " Program Errors
+            TOO_MANY_LINES                = 3                " Too many Rows in Ready for Input Grid
+            others                        = 4.
+        if SY-SUBRC <> 0.
+* message id sy-msgid type sy-msgty number sy-msgno
+*   with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+        endif.
+
+      endif.
+
+    endif.
+
+
+  endmethod.
+endclass.
+
+
+start-of-selection.
+
+  select VBELN ERDAT ERZET ERNAM VBTYP
+    from VBAK
+    into table LT_VBAK
+    where VBELN in S_VBELN.
+
+  LT_FIELDCAT1 = value #( ( COL_POS = 1 FIELDNAME = 'VBELN' SELTEXT = 'Sales Document' hotspot = 'X' )
+                          ( COL_POS = 2 FIELDNAME = 'ERDAT' SELTEXT = 'Date' )
+                          ( COL_POS = 3 FIELDNAME = 'ERZET' SELTEXT = 'Time' )
+                          ( COL_POS = 4 FIELDNAME = 'ERNAM' SELTEXT = 'Name' )
+                          ( COL_POS = 5 FIELDNAME = 'VBTYP' SELTEXT = 'Industry Type' ) ).
+
+  create object OBJ_CONTAINER1
+    exporting
+      CONTAINER_NAME = 'CON_NAM1'.
+  create object OBJ_GRID1
+    exporting
+      I_PARENT = OBJ_CONTAINER1.
+
+  call method OBJ_GRID1->SET_TABLE_FOR_FIRST_DISPLAY
+*    e
+    changing
+      IT_OUTTAB                     = LT_VBAK               " Output Table
+      IT_FIELDCATALOG               = LT_FIELDCAT1                 " Field Catalog
+*     IT_SORT                       =                  " Sort Criteria
+*     IT_FILTER                     =                  " Filter Criteria
+    exceptions
+      INVALID_PARAMETER_COMBINATION = 1                " Wrong Parameter
+      PROGRAM_ERROR                 = 2                " Program Errors
+      TOO_MANY_LINES                = 3                " Too many Rows in Ready for Input Grid
+      others                        = 4.
+  if SY-SUBRC <> 0.
+*   message id sy-msgid type sy-msgty number sy-msgno
+*     with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+  endif.
+
+  data:LO_OBJECT type ref to EVENT.
+  create object LO_OBJECT.
+
+*  set handler LO_OBJECT->HANDEL for OBJ_GRID1 .
+  set handler LO_OBJECT->HOT for OBJ_GRID1 .
+
+  call screen '0707'.
+
+
+
+*  LT_FIELDCAT2 = value #( ( COL_POS = 1 FIELDNAME = 'VBELN' SELTEXT = 'Sales Document' )
+*                          ( COL_POS = 2 FIELDNAME = 'POSNR' SELTEXT = 'Item' )
+*                          ( COL_POS = 3 FIELDNAME = 'MATNR' SELTEXT = 'Matrial Number' ) ).
+*
+*
+*  create object OBJ_CONTAINER2
+*    exporting
+*      CONTAINER_NAME = 'CON_NAM2'.
+*  create object OBJ_GRID2
+*    exporting
+*      I_PARENT = OBJ_CONTAINER2.
+*
+*  call method OBJ_GRID2->SET_TABLE_FOR_FIRST_DISPLAY
+*    changing
+*      IT_OUTTAB                     = LT_VBAP                " Output Table
+*      IT_FIELDCATALOG               = LT_FIELDCAT2                 " Field Catalog
+**     IT_SORT                       =                  " Sort Criteria
+**     IT_FILTER                     =                  " Filter Criteria
+*    exceptions
+*      INVALID_PARAMETER_COMBINATION = 1                " Wrong Parameter
+*      PROGRAM_ERROR                 = 2                " Program Errors
+*      TOO_MANY_LINES                = 3                " Too many Rows in Ready for Input Grid
+*      others                        = 4.
+*  if SY-SUBRC <> 0.
+** message id sy-msgid type sy-msgty number sy-msgno
+**   with sy-msgv1 sy-msgv2 sy-msgv3 sy-msgv4.
+*  endif.
+&---------------------------------------------------------------------
+*& Module STATUS_0707 OUTPUT
+&---------------------------------------------------------------------
+*&
+&---------------------------------------------------------------------
+module STATUS_0707 output.
+  set pf-status 'CANCEL'.
+  set titlebar 'CAN'.
+endmodule.
+
+&---------------------------------------------------------------------
+*&      Module  USER_COMMAND_0707  INPUT
+&---------------------------------------------------------------------
+*       text
+----------------------------------------------------------------------
+module USER_COMMAND_0707 input.
+  if SY-UCOMM = 'CANCEL'.
+    leave to screen 0.
+  endif.
+
+endmodule.
