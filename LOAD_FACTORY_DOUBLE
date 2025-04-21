@@ -1,0 +1,206 @@
+&---------------------------------------------------------------------
+*& Report ZFACTORY_ABAP
+&---------------------------------------------------------------------
+*&
+&---------------------------------------------------------------------
+REPORT zfactory_abap.
+TABLES:vbak,vbap.
+
+TYPES:BEGIN OF ty_vbak,
+        vbeln TYPE vbeln_va,
+        erdat TYPE erdat,
+        erzet TYPE erzet,
+        ernam TYPE ernam,
+        vbtyp TYPE vbtypl,
+      END OF ty_vbak.
+
+DATA:lt_vbak TYPE TABLE OF ty_vbak,
+     ls_vbak TYPE ty_vbak.
+
+TYPES:BEGIN OF ty_vbap,
+        vbeln TYPE vbeln_va,
+        posnr TYPE posnr_va,
+        matnr TYPE matnr,
+      END OF ty_vbap.
+
+DATA:lt_vbap TYPE TABLE OF ty_vbap,
+     ls_vbap TYPE ty_vbap.
+
+
+
+
+
+DATA:lo_factory TYPE REF TO cl_salv_table.
+DATA:lo_factory2 TYPE REF TO cl_salv_table.
+DATA:lo_functions TYPE REF TO cl_salv_functions_list.
+DATA:lo_columns TYPE REF TO cl_salv_columns_table.
+DATA:lo_sorts TYPE REF TO cl_salv_sorts.
+DATA:lo_filters TYPE REF TO cl_salv_filters.
+DATA:lo_filter TYPE REF TO cl_salv_filter.
+DATA:lo_event TYPE REF TO cl_salv_events_table.
+
+
+SELECT-OPTIONS:s_vbeln FOR vbak-vbeln.
+
+CLASS class1 DEFINITION.
+  PUBLIC SECTION.
+    METHODS handel FOR EVENT double_click OF cl_salv_events_table IMPORTING row column .
+ENDCLASS.
+
+CLASS class1 IMPLEMENTATION.
+  METHOD handel.
+    READ TABLE lt_vbak INTO ls_vbak INDEX row.
+    IF sy-subrc = 0.
+      SELECT vbeln posnr matnr
+        FROM vbap
+        INTO TABLE lt_vbap
+        WHERE vbeln = ls_vbak-vbeln.
+
+
+      TRY.
+          CALL METHOD cl_salv_table=>factory
+*      EXPORTING
+*        list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*        r_container    =
+*        container_name =
+            IMPORTING
+              r_salv_table = lo_factory2
+            CHANGING
+              t_table      = lt_vbap.
+        CATCH cx_salv_msg.
+      ENDTRY.
+
+    ENDIF.
+
+
+  CALL METHOD lo_factory2->display
+*   IMPORTING
+*     exit_caused_by_caller =
+*     exit_caused_by_user   =
+    .
+
+
+
+  ENDMETHOD.
+ENDCLASS.
+
+
+START-OF-SELECTION.
+  SELECT vbeln erdat erzet ernam vbtyp
+    FROM vbak
+    INTO TABLE lt_vbak
+    WHERE vbeln IN s_vbeln.
+
+
+  TRY.
+      CALL METHOD cl_salv_table=>factory
+*      EXPORTING
+*        list_display   = IF_SALV_C_BOOL_SAP=>FALSE
+*        r_container    =
+*        container_name =
+        IMPORTING
+          r_salv_table = lo_factory
+        CHANGING
+          t_table      = lt_vbak.
+    CATCH cx_salv_msg.
+  ENDTRY.
+
+  CALL METHOD lo_factory->if_salv_gui_om_table_info~get_functions
+    RECEIVING
+      value = lo_functions.
+  CALL METHOD lo_functions->set_all
+    EXPORTING
+      value = if_salv_c_bool_sap=>true.
+
+  CALL METHOD lo_factory->if_salv_gui_om_table_info~get_columns
+    RECEIVING
+      value = lo_columns.
+
+  CALL METHOD lo_columns->set_column_position
+    EXPORTING
+      columnname = 'ERDAT'
+      position   = 1.
+  CALL METHOD lo_columns->set_column_position
+    EXPORTING
+      columnname = 'ERNAM'
+      position   = 2.
+
+  CALL METHOD lo_factory->if_salv_gui_om_table_info~get_sorts
+    RECEIVING
+      value = lo_sorts.
+
+  TRY.
+      CALL METHOD lo_sorts->add_sort
+        EXPORTING
+          columnname = 'ERDAT'
+*         position   =
+          sequence   = if_salv_c_sort=>sort_down
+*         subtotal   = IF_SALV_C_BOOL_SAP=>FALSE
+*         group      = IF_SALV_C_SORT=>GROUP_NONE
+*         obligatory = IF_SALV_C_BOOL_SAP=>FALSE
+*  receiving
+*         value      =
+        .
+    CATCH cx_salv_not_found.
+    CATCH cx_salv_existing.
+    CATCH cx_salv_data_error.
+  ENDTRY.
+
+***CALL METHOD lo_factory->if_salv_gui_om_table_info~get_filters
+***  RECEIVING
+***    value  = lo_filters
+***    .
+***
+***TRY.
+***CALL METHOD lo_filters->add_filter
+***  EXPORTING
+***    columnname = 'VBELN'
+***    sign       = 'I'
+***    option     = 'EQ'
+***    low        =  '1'
+****    high       = '100'
+***  receiving
+***    value      = lo_filter
+***    .
+***  CATCH cx_salv_not_found.
+***  CATCH cx_salv_data_error.
+***  CATCH cx_salv_existing.
+***ENDTRY.
+***
+***TRY.
+***CALL METHOD lo_filter->add_selopt
+***  EXPORTING
+***    sign   = 'I'
+***    option = 'EQ'
+***    low    = '30'
+****    high   =
+****  RECEIVING
+****    value  =
+***    .
+***  CATCH cx_salv_data_error.
+***ENDTRY.
+
+
+  CALL METHOD lo_factory->if_salv_gui_om_table_info~get_event
+    RECEIVING
+      value = lo_event.
+
+  DATA:obj_event TYPE REF TO class1.
+  CREATE OBJECT obj_event.
+
+  SET HANDLER obj_event->handel FOR lo_event.
+
+
+
+
+
+
+
+
+
+
+  CALL METHOD lo_factory->display
+*   IMPORTING
+*     exit_caused_by_caller =
+*     exit_caused_by_user   =
+    .
