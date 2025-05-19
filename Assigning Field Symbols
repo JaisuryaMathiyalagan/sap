@@ -1,0 +1,38 @@
+&---------------------------------------------------------------------
+*& Report ZREPORT_DEMO_PRG
+&---------------------------------------------------------------------
+*&
+&---------------------------------------------------------------------
+REPORT zreport_demo_prg.
+
+*DATA : lv_data(2) TYPE n .
+**FIELD-SYMBOLS : <fs_data> TYPE n.
+**
+**lv_data = 10.
+**
+**ASSIGN lv_data TO <fs_data>.
+**IF <fs_data> IS ASSIGNED .
+**  <fs_data> = 20.
+**  WRITE:lv_data.
+**ENDIF.
+*
+*DATA:lv_dataobj(50) TYPE c.
+*FIELD-SYMBOLS:<fs_data> TYPE c.
+*lv_dataobj = 'Welcome To Home'.
+*
+*ASSIGN lv_dataobj TO <fs_data>.
+*IF <fs_data> IS ASSIGNED.
+*  <fs_data>+8(2) = 'At'.
+*  WRITE:<fs_data>.
+*ENDIF.
+
+DATA:lv_data(20) TYPE c .
+FIELD-SYMBOLS:<fs_data> TYPE c.
+lv_data = 'Hello Ram'.
+
+ASSIGN lv_data to <fs_data>.
+IF <fs_data> is assigned.
+  <fs_data>+6(3) = 'Rio'.
+
+ENDIF.
+WRITE:lv_data.
