@@ -1,0 +1,847 @@
+&---------------------------------------------------------------------
+*& Report ZSD_FLOW_REPORT
+&---------------------------------------------------------------------
+*&
+&---------------------------------------------------------------------
+REPORT zsd_flow_report.
+TABLES:vbak,vbap,likp,vbrk,lips.
+*
+TYPES:BEGIN OF ty_sales,
+        vbeln TYPE vbak-vbeln,  "Sales Document 'HEADER
+        erdat TYPE vbak-erdat,  "Date on which the record was created
+        kunnr TYPE vbak-kunnr,  "Sold-to Party
+        vkorg TYPE vbak-vkorg,  "Sales Organization
+        posnr TYPE vbap-posnr,  "Sales Document Item
+        matnr TYPE vbap-matnr,  "Material Number
+        zmeng TYPE vbap-zmeng,  "Target Quantity in Sales Units
+        werks TYPE vbap-werks,  "Plant (Own or External)
+        maktx TYPE makt-maktx,  "Material Description
+        name1 TYPE kna1-name1,
+      END OF ty_sales.
+
+DATA:lt_sales  TYPE TABLE OF ty_sales,
+     lwa_sales TYPE ty_sales.
+
+
+
+TYPES:BEGIN OF ty_delivery,
+        vbeln  TYPE vbak-vbeln,  "Sales Document 'HEADER
+        erdat  TYPE vbak-erdat,  "Date on which the record was created
+        kunnr  TYPE vbak-kunnr,  "Sold-to Party
+        name1  TYPE kna1-name1,
+        vkorg  TYPE vbak-vkorg,  "Sales Organization
+        posnr  TYPE vbap-posnr,  "Sales Document Item
+        matnr  TYPE vbap-matnr,  "Material Number
+        zmeng  TYPE vbap-zmeng,  "Target Quantity in Sales Units
+        werks  TYPE vbap-werks,  "Plant (Own or External)
+        maktx  TYPE makt-maktx,
+        vbeln1 TYPE lips-vbeln,  "Delivery number 'ITEM
+        posnr1 TYPE lips-posnr,
+        erdat1 TYPE lips-erdat,
+        lfimg  TYPE lips-lfimg,  "Actual quantity delivered (in sales units)
+        vgbel  TYPE lips-vgbel,
+        vgpos  TYPE lips-vgpos,
+      END OF ty_delivery.
+
+DATA:lt_delivery  TYPE TABLE OF ty_delivery,
+     lwa_delivery TYPE ty_delivery.
+
+
+TYPES:BEGIN OF ty_billing,
+
+        vbeln  TYPE vbak-vbeln,  "Sales Document 'HEADER
+        erdat  TYPE vbak-erdat,  "Date on which the record was created
+        kunnr  TYPE vbak-kunnr,  "Sold-to Party
+        name1  TYPE kna1-name1,
+        vkorg  TYPE vbak-vkorg,  "Sales Organization
+        posnr  TYPE vbap-posnr,  "Sales Document Item
+        matnr  TYPE vbap-matnr,  "Material Number
+        zmeng  TYPE vbap-zmeng,  "Target Quantity in Sales Units
+        werks  TYPE vbap-werks,  "Plant (Own or External)
+        maktx  TYPE makt-maktx,
+        vbeln1 TYPE lips-vbeln,     "Delivery number 'ITEM
+        posnr1 TYPE lips-posnr,
+        erdat1 TYPE lips-erdat,     "Delivery Date
+        lfimg  TYPE lips-lfimg,     "Actual quantity delivered (in sales units)
+        vgbel  TYPE lips-vgbel,
+        vgpos  TYPE lips-vgpos,
+        vbeln2 TYPE vbrk-vbeln,     "Billing Document 'HEADER
+        posnr2 TYPE vbrp-posnr,     "Billing Document 'ITEM
+        fkimg  TYPE vbrp-fkimg,     "Actual billed quantity
+        fkdat  TYPE vbrk-fkdat,     "Billing Date
+      END OF ty_billing.
+
+DATA:lt_billing  TYPE TABLE OF ty_billing,
+     lwa_billing TYPE ty_billing.
+
+TYPES:BEGIN OF ty_all,
+
+        vbeln   TYPE vbak-vbeln,  "Sales Document 'HEADER
+        erdat   TYPE vbak-erdat,  "Date on which the record was created
+        kunnr   TYPE vbak-kunnr,  "Sold-to Party
+        name1   TYPE kna1-name1,
+        vkorg   TYPE vbak-vkorg,  "Sales Organization
+        posnr   TYPE vbap-posnr,  "Sales Document Item
+        matnr   TYPE vbap-matnr,  "Material Number
+        zmeng   TYPE vbap-zmeng,  "Target Quantity in Sales Units
+        werks   TYPE vbap-werks,  "Plant (Own or External)
+        maktx   TYPE makt-maktx,
+        vbeln1  TYPE lips-vbeln,     "Delivery number 'ITEM
+        posnr1  TYPE lips-posnr,
+        erdat1  TYPE lips-erdat,     "Delivery Date
+        lfimg   TYPE lips-lfimg,     "Actual quantity delivered (in sales units)
+        vgbel   TYPE lips-vgbel,
+        vgpos   TYPE lips-vgpos,
+        vbeln2  TYPE vbrk-vbeln,     "Billing Document 'HEADER
+        posnr2  TYPE vbrp-posnr,     "Billing Document 'ITEM
+        fkimg   TYPE vbrp-fkimg,     "Actual billed quantity
+        fkdat   TYPE vbrk-fkdat,     "Billing Date
+        age     TYPE i,
+        settled TYPE c,
+
+      END OF ty_all.
+
+DATA:lt_all  TYPE TABLE OF ty_all,
+     lwa_all TYPE ty_all.
+
+
+
+DATA:lt_fieldcat TYPE slis_t_fieldcat_alv,
+     lt_fcat     TYPE slis_t_fieldcat_alv.
+
+
+
+
+TYPES:BEGIN OF ty_plants,
+        matnr TYPE marc-matnr,
+        werks TYPE marc-werks,
+      END OF ty_plants.
+
+
+
+DATA:lt_plants  TYPE TABLE OF ty_plants,
+     lwa_plants TYPE ty_plants.
+
+
+
+SELECTION-SCREEN BEGIN OF BLOCK f WITH FRAME TITLE TEXT-006.
+
+  SELECTION-SCREEN BEGIN OF BLOCK a WITH FRAME TITLE TEXT-000.
+    SELECT-OPTIONS:s_vbeln FOR vbak-vbeln MODIF ID xx,
+                   s_vkorg FOR vbak-vkorg MODIF ID xx,
+                   s_erdat FOR vbak-erdat MODIF ID xx.
+  SELECTION-SCREEN END OF BLOCK a.
+
+
+  SELECTION-SCREEN BEGIN OF BLOCK b WITH FRAME TITLE TEXT-001.
+    SELECT-OPTIONS:s_vbeln1 FOR likp-vbeln MODIF ID yy,
+                   s_erdat1 FOR likp-erdat MODIF ID yy.
+  SELECTION-SCREEN END OF BLOCK b.
+
+
+  SELECTION-SCREEN BEGIN OF BLOCK c WITH FRAME TITLE TEXT-003.
+    SELECT-OPTIONS:s_vbeln2 FOR vbrk-vbeln MODIF ID zz,
+                   s_erdat2 FOR vbrk-erdat MODIF ID zz.
+  SELECTION-SCREEN END OF BLOCK c.
+
+SELECTION-SCREEN END OF BLOCK f.
+
+
+SELECTION-SCREEN BEGIN OF BLOCK d WITH FRAME TITLE TEXT-004.
+  SELECT-OPTIONS:s_werks FOR vbap-werks NO INTERVALS.
+SELECTION-SCREEN END OF BLOCK d.
+
+SELECTION-SCREEN BEGIN OF BLOCK e WITH FRAME TITLE TEXT-005.
+  PARAMETERS:button1 RADIOBUTTON GROUP r USER-COMMAND sy-ucomm, "DEFAULT'X',
+             button2 RADIOBUTTON GROUP r,
+             button3 RADIOBUTTON GROUP r,
+             button4 RADIOBUTTON GROUP r DEFAULT 'X'.
+SELECTION-SCREEN END OF BLOCK e.
+
+AT SELECTION-SCREEN OUTPUT.
+  LOOP AT SCREEN.
+    IF button1 = 'X'.
+      IF screen-group1 = 'YY' OR screen-group1 = 'ZZ'.
+        screen-active = 0.
+        MODIFY SCREEN.
+      ENDIF.
+    ENDIF.
+    IF button2 = 'X'.
+      IF screen-group1 = 'ZZ'.
+        screen-active = 0.
+        MODIFY SCREEN.
+      ENDIF.
+    ENDIF.
+    IF button3 = 'X'.
+      IF screen-group1 = 'XX' OR screen-group1 = 'YY'.
+        screen-active = 0.
+        MODIFY SCREEN.
+      ENDIF.
+    ENDIF.
+  ENDLOOP.
+
+AT SELECTION-SCREEN .
+
+  IF s_vbeln IS NOT INITIAL.
+    SELECT SINGLE vbeln FROM vbak INTO @s_vbeln
+        WHERE vbeln IN @s_vbeln.
+    IF sy-subrc <> 0.
+      MESSAGE 'Enter Valid Sales Order Number' TYPE 'E'.
+    ENDIF.
+  ENDIF.
+
+
+  IF s_vkorg IS NOT INITIAL.
+    SELECT SINGLE vkorg FROM vbak INTO @s_vkorg
+        WHERE vkorg IN @s_vkorg.
+    IF sy-subrc <> 0.
+      MESSAGE 'Enter Valid Sales Organization Number' TYPE 'E'.
+    ENDIF.
+  ENDIF.
+
+
+  IF s_vbeln1 IS NOT INITIAL.
+    SELECT SINGLE vbeln FROM likp INTO @s_vbeln1
+        WHERE vbeln IN @s_vbeln1.
+    IF sy-subrc <> 0.
+      MESSAGE 'Enter Valid Delivery Number ' TYPE 'E'.
+    ENDIF.
+  ENDIF.
+
+*
+  IF s_vbeln2 IS NOT INITIAL.
+    SELECT SINGLE vbeln FROM vbrk INTO @s_vbeln2
+        WHERE vbeln IN @s_vbeln2.
+    IF sy-subrc <> 0.
+      MESSAGE 'Enter Valid Billing Number' TYPE 'E'.
+    ENDIF.
+  ENDIF.
+
+*
+  IF s_werks IS NOT INITIAL.
+    SELECT SINGLE werks FROM lips INTO @s_werks
+        WHERE werks IN @s_werks.
+    IF sy-subrc <> 0.
+      MESSAGE 'Enter Valid Plant Number' TYPE 'E'.
+    ENDIF.
+  ENDIF.
+
+
+START-OF-SELECTION.
+
+  IF button1 ='X'.
+    PERFORM sales_data.
+    PERFORM sales_display.
+  ENDIF.
+
+  IF button2 = 'X'.
+    PERFORM delivery_data.
+    PERFORM delivery_display.
+  ENDIF.
+*
+  IF button3 = 'X'.
+    PERFORM invoice_data.
+    PERFORM invoice_display.
+  ENDIF.
+*
+  IF button4  = 'X'.
+    PERFORM display_all_data.
+    PERFORM display_all.
+  ENDIF.
+&---------------------------------------------------------------------
+*& Form sales_data
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM sales_data .
+
+  SELECT a~vbeln,a~erdat,a~vkorg,a~kunnr,b~posnr,b~matnr,b~werks,b~zmeng
+         FROM vbak AS a
+         INNER JOIN vbap AS b
+         ON a~vbeln = b~vbeln
+         INTO TABLE @DATA(lt_order)
+         WHERE a~vbeln IN @s_vbeln
+          AND a~erdat IN  @s_erdat
+          AND a~vkorg IN @s_vkorg
+          AND b~werks IN @s_werks.
+
+**  JOIN makt.
+
+  IF NOT lt_order IS INITIAL.
+    SELECT matnr,maktx FROM makt
+    INTO TABLE @DATA(lt_makt)
+    FOR ALL ENTRIES IN @lt_order
+    WHERE matnr = @lt_order-matnr AND spras = @sy-langu.
+
+*  JOIN kna1
+
+    SELECT kunnr,name1 FROM kna1 INTO TABLE @DATA(lt_kna1)
+      FOR ALL ENTRIES IN @lt_order
+    WHERE kunnr = @lt_order-kunnr AND spras = @sy-langu.
+  ENDIF.
+
+  SORT lt_order BY vbeln posnr.
+  SORT lt_makt BY matnr.
+  SORT lt_kna1 BY kunnr.
+
+  LOOP AT lt_order INTO DATA(lwa_order).
+*      MOVE-CORRESPONDING lwa_order TO lwa_sales.
+    lwa_sales-vbeln = lwa_order-vbeln .
+    lwa_sales-erdat = lwa_order-erdat .
+    lwa_sales-kunnr = lwa_order-kunnr .
+    lwa_sales-vkorg = lwa_order-vkorg .
+    lwa_sales-posnr = lwa_order-posnr .
+    lwa_sales-matnr = lwa_order-matnr .
+    lwa_sales-zmeng = lwa_order-zmeng .
+    lwa_sales-werks = lwa_order-werks .
+
+    READ TABLE lt_makt INTO DATA(lwa_makt) WITH KEY matnr = lwa_order-matnr.
+    IF sy-subrc = 0 .
+*        MOVE-CORRESPONDING lwa_makt TO lwa_sales.
+      lwa_sales-maktx = lwa_makt-maktx.
+
+**          ENDIF.
+
+      READ TABLE lt_kna1 INTO DATA(lwa_kna1) WITH KEY kunnr = lwa_order-kunnr.
+      IF sy-subrc = 0.
+*        MOVE-CORRESPONDING lwa_kna1 TO lwa_sales.
+        lwa_sales-name1 = lwa_kna1-name1.
+      ENDIF.
+
+      APPEND lwa_sales TO lt_sales.
+      CLEAR lwa_sales.
+
+    ENDIF.
+
+  ENDLOOP.
+
+
+ENDFORM.
+&---------------------------------------------------------------------
+*& Form sales_display
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM sales_display .
+  lt_fieldcat = VALUE #( ( col_pos = 1  fieldname = 'VBELN' seltext_l = 'Sales No'    key     = 'X' hotspot = 'X' )
+                         ( col_pos = 2  fieldname = 'KUNNR' seltext_l = 'Customer No' key     = 'X' )
+                         ( col_pos = 3  fieldname = 'NAME1' seltext_l = 'Customer Name' )
+                         ( col_pos = 4  fieldname = 'VKORG' seltext_l = 'Sales Org' )
+                         ( col_pos = 5  fieldname = 'ERDAT' seltext_l = 'Sales Date' )
+                         ( col_pos = 6  fieldname = 'POSNR' seltext_l = 'Item No' )
+                         ( col_pos = 7  fieldname = 'MATNR' seltext_l = 'Material No' hotspot = 'X' )
+                         ( col_pos = 8  fieldname = 'MAKTX' seltext_l = 'Description' )
+                         ( col_pos = 9  fieldname = 'WERKS' seltext_l = 'Plant' )
+                         ( col_pos = 10 fieldname = 'ZMENG' seltext_l = 'Sale Qty' )
+                       ).
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program       = sy-repid
+      it_fieldcat              = lt_fieldcat
+      i_callback_pf_status_set = 'PF_STATUS'
+      i_callback_user_command  = 'USR'
+    TABLES
+      t_outtab                 = lt_sales
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+  IF sy-subrc <> 0.
+    RETURN.
+  ENDIF.
+
+ENDFORM.
+&---------------------------------------------------------------------
+*& Form delivery_data
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM delivery_data .
+  PERFORM sales_data.
+
+  IF NOT lt_sales IS INITIAL.
+    SELECT b~vbeln,a~posnr,a~erdat,a~lfimg,a~vgbel,a~vgpos
+    FROM lips AS a INNER JOIN likp AS b
+    ON a~vbeln = b~vbeln
+    INTO TABLE @DATA(lt_sdel)
+    FOR ALL ENTRIES IN @lt_sales
+    WHERE a~vgbel = @lt_sales-vbeln
+    AND b~vbeln IN @s_vbeln1
+    AND b~erdat IN @s_erdat1.
+
+    LOOP AT lt_sales INTO lwa_sales.
+      lwa_delivery-vbeln = lwa_sales-vbeln .
+      lwa_delivery-erdat = lwa_sales-erdat .
+      lwa_delivery-kunnr = lwa_sales-kunnr .
+      lwa_delivery-vkorg = lwa_sales-vkorg .
+      lwa_delivery-posnr = lwa_sales-posnr .
+      lwa_delivery-matnr = lwa_sales-matnr .
+      lwa_delivery-zmeng = lwa_sales-zmeng .
+      lwa_delivery-werks = lwa_sales-werks .
+      lwa_delivery-maktx = lwa_sales-maktx .
+      lwa_delivery-name1 = lwa_sales-name1 .
+
+      READ TABLE lt_sdel INTO DATA(lwa_sdel) WITH KEY vgbel = lwa_sales-vbeln.
+      IF sy-subrc = 0.
+        lwa_delivery-vbeln1 = lwa_sdel-vbeln.
+        lwa_delivery-posnr1 = lwa_sdel-posnr.
+        lwa_delivery-erdat1 = lwa_sdel-erdat.
+        lwa_delivery-lfimg  = lwa_sdel-lfimg.
+        lwa_delivery-vgbel  = lwa_sdel-vgbel.
+        lwa_delivery-vgpos  = lwa_sdel-vgpos.
+      ENDIF.
+      APPEND lwa_delivery TO lt_delivery.
+      CLEAR: lwa_delivery,lwa_sdel,lwa_sales.
+    ENDLOOP.
+  ENDIF.
+
+
+
+
+
+ENDFORM.
+&---------------------------------------------------------------------
+*& Form delivery_display
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM delivery_display .
+  lt_fieldcat = VALUE #( ( col_pos = 1  fieldname = 'VBELN'  seltext_l = 'Sales No'    key     = 'X' hotspot = 'X' )
+                         ( col_pos = 2  fieldname = 'KUNNR'  seltext_l = 'Customer No' key     = 'X' )
+                         ( col_pos = 3  fieldname = 'NAME1'  seltext_l = 'Customer Name' )
+                         ( col_pos = 4  fieldname = 'VKORG'  seltext_l = 'Sales Org' )
+                         ( col_pos = 5  fieldname = 'ERDAT'  seltext_l = 'Sales Date' )
+                         ( col_pos = 6  fieldname = 'POSNR'  seltext_l = 'Item No' )
+                         ( col_pos = 7  fieldname = 'MATNR'  seltext_l = 'Material No' hotspot = 'X' )
+                         ( col_pos = 8  fieldname = 'MAKTX'  seltext_l = 'Description' )
+                         ( col_pos = 9  fieldname = 'WERKS'  seltext_l = 'Plant' )
+                         ( col_pos = 10 fieldname = 'ZMENG'  seltext_l = 'Sale Qty' )
+                         ( col_pos = 11 fieldname = 'VBELN1' seltext_l = 'Del. No'     hotspot = 'X' )
+                         ( col_pos = 12 fieldname = 'POSNR1' seltext_l = 'Del. Item' )
+                         ( col_pos = 13 fieldname = 'ERDAT1' seltext_l = 'Del. Date' )
+                         ( col_pos = 14 fieldname = 'LFIMG'  seltext_l = 'Del. Qty' )
+                       ).
+
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program       = sy-repid
+      it_fieldcat              = lt_fieldcat
+      i_callback_pf_status_set = 'PF_STATUS'
+      i_callback_user_command  = 'USR'
+    TABLES
+      t_outtab                 = lt_delivery
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+  IF sy-subrc <> 0.
+    RETURN.
+  ENDIF.
+
+
+
+
+
+
+
+
+ENDFORM.
+&---------------------------------------------------------------------
+*& Form invoice_data
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM invoice_data .
+*  PERFORM delivery_data.
+*  IF lt_delivery IS NOT INITIAL.
+*    SELECT a~vbeln,a~fkdat,b~posnr,b~fkimg,b~vgbel
+*      FROM vbrk AS a INNER JOIN vbrp AS b ON a~vbeln = b~vbeln
+*      INTO TABLE @DATA(lt_invoc)
+*      FOR ALL ENTRIES IN @lt_delivery
+*      WHERE b~vgbel = @lt_delivery-vbeln1 AND
+*            b~vgpos = @lt_delivery-posnr1  AND
+*            a~vbeln IN @s_vbeln2 AND
+*            a~erdat IN @s_erdat2.
+*    IF sy-subrc = 0.
+*    ENDIF.
+*  ENDIF.
+*  LOOP AT lt_delivery INTO lwa_delivery.
+*    lwa_billing-vbeln = lwa_delivery-vbeln .
+*    lwa_billing-erdat = lwa_delivery-erdat .
+*    lwa_billing-kunnr = lwa_delivery-kunnr .
+*    lwa_billing-vkorg = lwa_delivery-vkorg .
+*    lwa_billing-posnr = lwa_delivery-posnr .
+*    lwa_billing-matnr = lwa_delivery-matnr .
+*    lwa_billing-zmeng = lwa_delivery-zmeng .
+*    lwa_billing-werks = lwa_delivery-werks .
+*    lwa_billing-maktx = lwa_delivery-maktx .
+*    lwa_billing-name1 = lwa_delivery-name1 .
+*    lwa_billing-vbeln1 = lwa_delivery-vbeln .
+*    lwa_billing-posnr1 = lwa_delivery-posnr .
+*    lwa_billing-erdat1 = lwa_delivery-erdat .
+*    lwa_billing-lfimg  = lwa_delivery-lfimg  .
+*    lwa_billing-vgbel  = lwa_delivery-vgbel  .
+*    lwa_billing-vgpos  = lwa_delivery-vgpos  .
+*    READ TABLE lt_invoc INTO DATA(lwa_invoc) WITH KEY vgbel = lwa_delivery-vbeln1.
+*    IF sy-subrc = 0.
+*      lwa_billing-vbeln2 = lwa_invoc-vbeln.
+*      lwa_billing-posnr2 = lwa_invoc-posnr.
+*      lwa_billing-fkdat  = lwa_invoc-fkdat.
+*      lwa_billing-fkimg  = lwa_invoc-fkimg.
+*
+*    ENDIF.
+*
+*
+*    APPEND lwa_billing TO lt_billing.
+*    CLEAR: lwa_billing, lwa_sales , lwa_delivery, lwa_invoc.
+*  ENDLOOP.
+
+
+  PERFORM delivery_data.
+  IF lt_delivery IS NOT INITIAL.
+    SELECT a~vbeln,a~fkdat,b~posnr,b~fkimg,b~vgbel
+      FROM vbrk AS a INNER JOIN vbrp AS b ON a~vbeln = b~vbeln
+      INTO TABLE @DATA(lt_invoc)
+      FOR ALL ENTRIES IN @lt_delivery
+      WHERE b~vgbel = @lt_delivery-vbeln1 AND
+            b~vgpos = @lt_delivery-posnr1  AND
+            a~vbeln IN @s_vbeln2 AND
+            a~erdat IN @s_erdat2.
+    IF sy-subrc = 0.
+    ENDIF.
+  ENDIF.
+  LOOP AT lt_delivery INTO lwa_delivery.
+    lwa_billing-vbeln = lwa_delivery-vbeln .
+    lwa_billing-erdat = lwa_delivery-erdat .
+    lwa_billing-kunnr = lwa_delivery-kunnr .
+    lwa_billing-vkorg = lwa_delivery-vkorg .
+    lwa_billing-posnr = lwa_delivery-posnr .
+    lwa_billing-matnr = lwa_delivery-matnr .
+    lwa_billing-zmeng = lwa_delivery-zmeng .
+    lwa_billing-werks = lwa_delivery-werks .
+    lwa_billing-maktx = lwa_delivery-maktx .
+    lwa_billing-name1 = lwa_delivery-name1 .
+    lwa_billing-vbeln1 = lwa_delivery-vbeln1 .
+    lwa_billing-posnr1 = lwa_delivery-posnr1 .
+    lwa_billing-erdat1 = lwa_delivery-erdat1 .
+    lwa_billing-lfimg = lwa_delivery-lfimg  .
+    lwa_billing-vgbel = lwa_delivery-vgbel  .
+    lwa_billing-vgpos = lwa_delivery-vgpos  .
+    READ TABLE lt_invoc INTO DATA(lwa_invoc) WITH KEY vgbel = lwa_delivery-vbeln1.
+    IF sy-subrc = 0.
+      lwa_billing-vbeln2 = lwa_invoc-vbeln.
+      lwa_billing-posnr2 = lwa_invoc-posnr.
+      lwa_billing-fkdat = lwa_invoc-fkdat.
+      lwa_billing-fkimg = lwa_invoc-fkimg.
+    ENDIF.
+
+
+    APPEND lwa_billing TO lt_billing.
+    CLEAR: lwa_billing, lwa_sales , lwa_delivery, lwa_invoc.
+  ENDLOOP.
+
+
+
+
+
+
+
+
+
+
+
+ENDFORM.
+&---------------------------------------------------------------------
+*& Form invoice_display
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM invoice_display .
+  lt_fieldcat =  VALUE #( ( col_pos = 1  fieldname = 'VBELN'  seltext_l = 'Sales No'    key     = 'X' hotspot = 'X' )
+                          ( col_pos = 2  fieldname = 'KUNNR'  seltext_l = 'Customer No' key     = 'X' )
+                          ( col_pos = 3  fieldname = 'NAME1'  seltext_l = 'Customer Name' )
+                          ( col_pos = 4  fieldname = 'VKORG'  seltext_l = 'Sales Org' )
+                          ( col_pos = 5  fieldname = 'ERDAT'  seltext_l = 'Sales Date' )
+                          ( col_pos = 6  fieldname = 'POSNR'  seltext_l = 'Item No' )
+                          ( col_pos = 7  fieldname = 'MATNR'  seltext_l = 'Material No' hotspot = 'X' )
+                          ( col_pos = 8  fieldname = 'MAKTX'  seltext_l = 'Description' )
+                          ( col_pos = 9  fieldname = 'WERKS'  seltext_l = 'Plant' )
+                          ( col_pos = 10 fieldname = 'ZMENG'  seltext_l = 'Sale Qty' )
+                          ( col_pos = 11 fieldname = 'VBELN1' seltext_l = 'Del. No'     hotspot = 'X' )
+                          ( col_pos = 12 fieldname = 'POSNR1' seltext_l = 'Del. Item' )
+                          ( col_pos = 13 fieldname = 'ERDAT1' seltext_l = 'Del. Date' )
+                          ( col_pos = 14 fieldname = 'LFIMG'  seltext_l = 'Del. Qty' )
+                          ( col_pos = 15 fieldname = 'VBELN2' seltext_l = 'Inv. No'     hotspot = 'X' )
+                          ( col_pos = 16 fieldname = 'POSNR2' seltext_l = 'Inv. Item' )
+                          ( col_pos = 17 fieldname = 'FKDAT'  seltext_l = 'Inv. Date' )
+                          ( col_pos = 18 fieldname = 'FKIMG'  seltext_l = 'Inv. Qty' )
+                        ).
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program       = sy-repid
+      it_fieldcat              = lt_fieldcat
+      i_callback_pf_status_set = 'PF_STATUS'
+      i_callback_user_command  = 'USR'
+    TABLES
+      t_outtab                 = lt_billing
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+  IF sy-subrc <> 0.
+    RETURN.
+  ENDIF.
+
+
+
+ENDFORM.
+&---------------------------------------------------------------------
+*& Form display_all_data
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM display_all_data .
+
+  PERFORM invoice_data.
+
+*  IF NOT lt_bil IS INITIAL.
+*    LOOP AT lt_bil INTO DATA(lw_bil).
+*      MOVE-CORRESPONDING lw_bil TO lw_dis_all.
+*      lv_end_date = lw_dis_all-erdat.
+*      lv_start_date = lw_dis_all-fkdat.
+*      IF NOT lv_end_date IS INITIAL OR NOT lv_start_date IS INITIAL.
+*        CALL FUNCTION 'FIMA_DAYS_BETWEEN_TWO_DATES'
+*          EXPORTING
+*            i_datum_von = lv_start_date
+*            i_datum_bis = lv_end_date
+*          IMPORTING
+*            e_tage      = lw_dis_all-age.
+*
+*      ENDIF.
+*      if lw_dis_all-age is not initial.
+*        lw_dis_all-settled = 'YES'.
+*      else.
+*        lw_dis_all-settled = 'NO'.
+*      endif.
+*      APPEND lw_dis_all TO lt_dis_all.
+*      CLEAR lw_dis_all.
+*    ENDLOOP.
+*
+*  ENDIF.
+
+
+
+
+  DATA:lv_invoc_date TYPE  sy-datum,
+       lv_sales_date TYPE  sy-datum.
+
+  IF NOT lt_billing IS INITIAL.
+    LOOP AT lt_billing INTO lwa_billing.
+*      MOVE-CORRESPONDING lw_bil TO lw_dis_all.
+      lwa_all-vbeln = lwa_billing-vbeln .
+      lwa_all-erdat = lwa_billing-erdat .
+      lwa_all-kunnr = lwa_billing-kunnr .
+      lwa_all-vkorg = lwa_billing-vkorg .
+      lwa_all-posnr = lwa_billing-posnr .
+      lwa_all-matnr = lwa_billing-matnr .
+      lwa_all-zmeng = lwa_billing-zmeng .
+      lwa_all-werks = lwa_billing-werks .
+      lwa_all-maktx = lwa_billing-maktx .
+      lwa_all-name1 = lwa_billing-name1 .
+      lwa_all-vbeln1 = lwa_billing-vbeln1 .
+      lwa_all-posnr1 = lwa_billing-posnr1 .
+      lwa_all-erdat1 = lwa_billing-erdat1 .
+      lwa_all-lfimg  = lwa_billing-lfimg  .
+      lwa_all-vgbel  = lwa_billing-vgbel  .
+      lwa_all-vgpos  = lwa_billing-vgpos  .
+      lwa_all-vbeln2 = lwa_billing-vbeln2 .
+      lwa_all-posnr2 = lwa_billing-posnr2 .
+      lwa_all-fkdat  = lwa_billing-fkdat  .
+      lwa_all-fkimg  = lwa_billing-fkimg  .
+
+      lv_invoc_date = lwa_all-fkdat.
+      lv_sales_date = lwa_all-erdat.
+
+      CALL FUNCTION 'DAYS_BETWEEN_TWO_DATES'
+        EXPORTING
+          i_datum_bis             = lv_sales_date
+          i_datum_von             = lv_invoc_date
+*         I_KZ_EXCL_VON           = '0'
+*         I_KZ_INCL_BIS           = '0'
+*         I_KZ_ULT_BIS            = ' '
+*         I_KZ_ULT_VON            = ' '
+*         I_STGMETH               = '0'
+*         I_SZBMETH               = '1'
+        IMPORTING
+          e_tage                  = lwa_all-age
+        EXCEPTIONS
+          days_method_not_defined = 1
+          OTHERS                  = 2.
+      IF sy-subrc <> 0.
+        RETURN.
+      ENDIF.
+
+
+      IF lwa_all-age IS NOT INITIAL.
+        lwa_all-settled = 'YES'.
+      ELSE.
+        lwa_all-settled = 'NO'.
+      ENDIF.
+      APPEND lwa_all TO lt_all.
+      CLEAR lwa_all.
+
+    ENDLOOP.
+
+  ENDIF.
+
+
+
+
+
+
+ENDFORM.
+&---------------------------------------------------------------------
+*& Form display_all
+&---------------------------------------------------------------------
+*& text
+&---------------------------------------------------------------------
+*& -->  p1        text
+*& <--  p2        text
+&---------------------------------------------------------------------
+FORM display_all .
+  lt_fieldcat =  VALUE #( ( col_pos = 1  fieldname = 'VBELN'   seltext_l = 'Sales No'    key     = 'X' hotspot = 'X' )
+                          ( col_pos = 2  fieldname = 'KUNNR'   seltext_l = 'Customer No' key     = 'X' )
+                          ( col_pos = 3  fieldname = 'NAME1'   seltext_l = 'Customer Name' )
+                          ( col_pos = 4  fieldname = 'VKORG'   seltext_l = 'Sales Org' )
+                          ( col_pos = 5  fieldname = 'ERDAT'   seltext_l = 'Sales Date' )
+                          ( col_pos = 6  fieldname = 'POSNR'   seltext_l = 'Item No' )
+                          ( col_pos = 7  fieldname = 'MATNR'   seltext_l = 'Material No' hotspot = 'X' )
+                          ( col_pos = 8  fieldname = 'MAKTX'   seltext_l = 'Description' )
+                          ( col_pos = 9  fieldname = 'WERKS'   seltext_l = 'Plant' )
+                          ( col_pos = 10 fieldname = 'ZMENG'   seltext_l = 'Sale Qty' )
+                          ( col_pos = 11 fieldname = 'VBELN1'  seltext_l = 'Del. No'     hotspot = 'X' )
+                          ( col_pos = 12 fieldname = 'POSNR1'  seltext_l = 'Del. Item' )
+                          ( col_pos = 13 fieldname = 'ERDAT1'  seltext_l = 'Del. Date' )
+                          ( col_pos = 14 fieldname = 'LFIMG'   seltext_l = 'Del. Qty' )
+                          ( col_pos = 15 fieldname = 'VBELN2'  seltext_l = 'Inv. No'     hotspot = 'X' )
+                          ( col_pos = 16 fieldname = 'POSNR2'  seltext_l = 'Inv. Item' )
+                          ( col_pos = 17 fieldname = 'FKDAT'   seltext_l = 'Inv. Date' )
+                          ( col_pos = 18 fieldname = 'FKIMG'   seltext_l = 'Inv. Qty' )
+                          ( col_pos = 19 fieldname = 'AGE'     seltext_l = 'Age' )
+                          ( col_pos = 20 fieldname = 'SETTLED' seltext_l = 'Settled' )
+  ).
+
+  CALL FUNCTION 'REUSE_ALV_GRID_DISPLAY'
+    EXPORTING
+      i_callback_program       = sy-repid
+      it_fieldcat              = lt_fieldcat
+      i_callback_pf_status_set = 'PF_STATUS'
+      i_callback_user_command  = 'USR'
+    TABLES
+      t_outtab                 = lt_all
+    EXCEPTIONS
+      program_error            = 1
+      OTHERS                   = 2.
+  IF sy-subrc <> 0.
+    RETURN.
+  ENDIF.
+
+
+
+
+
+
+
+ENDFORM.
+
+
+
+
+
+FORM usr USING lv_comm TYPE sy-ucomm ls_selstru TYPE slis_selfield .
+  CASE lv_comm.
+    WHEN '&IC1'.
+      IF ls_selstru-fieldname = 'VBELN'.
+        SET PARAMETER ID 'AUN' FIELD ls_selstru-value.
+        CALL TRANSACTION 'VA03' AND SKIP FIRST SCREEN.
+      ELSEIF ls_selstru-fieldname = 'MATNR'.
+        SET PARAMETER ID 'MAT' FIELD ls_selstru-value.
+        CALL TRANSACTION 'MM01' AND SKIP FIRST SCREEN.
+      ELSEIF ls_selstru-fieldname = 'VBELN1'.
+        SET PARAMETER ID 'VL' FIELD ls_selstru-value.
+        CALL TRANSACTION 'VL03' AND SKIP FIRST SCREEN.
+      ELSEIF ls_selstru-fieldname = 'VBELN2'.
+        SET PARAMETER ID 'VF' FIELD ls_selstru-value.
+        CALL TRANSACTION 'VF03' AND SKIP FIRST SCREEN.
+      ENDIF.
+    WHEN 'DISPLAY'.
+      SELECT matnr werks
+        FROM marc
+        INTO TABLE lt_plants
+        WHERE matnr = ls_selstru-value.
+
+      lt_fcat = VALUE #( ( col_pos = 1 fieldname = 'MATNR' seltext_l = 'Material No' )
+                         ( col_pos = 2 fieldname = 'WERKS' seltext_l = 'Plants' ) ).
+
+      CALL FUNCTION 'REUSE_ALV_POPUP_TO_SELECT'
+        EXPORTING
+*         I_TITLE               =
+*         I_SELECTION           = 'X'
+*         I_ALLOW_NO_SELECTION  =
+*         I_ZEBRA               = ' '
+          i_screen_start_column = 10
+          i_screen_start_line   = 05
+          i_screen_end_column   = 50
+          i_screen_end_line     = 10
+*         I_CHECKBOX_FIELDNAME  =
+*         I_LINEMARK_FIELDNAME  =
+*         I_SCROLL_TO_SEL_LINE  = 'X'
+          i_tabname             = 'lt_plants'
+*         I_STRUCTURE_NAME      =
+          it_fieldcat           = lt_fcat
+*         IT_EXCLUDING          =
+*         I_CALLBACK_PROGRAM    =
+*         I_CALLBACK_USER_COMMAND       =
+*         IS_PRIVATE            =
+*         IMPORTING
+*         ES_SELFIELD           =
+*         E_EXIT                =
+        TABLES
+          t_outtab              = lt_plants
+        EXCEPTIONS
+          program_error         = 1
+          OTHERS                = 2.
+      IF sy-subrc <> 0.
+        RETURN.
+      ENDIF.
+
+
+*      cl_demo_output=>display( lt_plants ).
+  ENDCASE.
+
+
+ENDFORM.
+
+FORM pf_status USING rt_extab TYPE slis_t_extab.
+  SET PF-STATUS 'MARC'.
+ENDFORM.
